@@ -1,0 +1,985 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Collaborative Drawing Canvas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Username Modal */
+        #username-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-content h2 {
+            color: #4f46e5;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .modal-content p {
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+
+        #username-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #username-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        #username-submit {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        #username-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1400px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 95vh;
+        }
+
+        /* Header */
+        .app-header {
+            background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .app-header h1 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-online {
+            background-color: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+
+        .status-offline {
+            background-color: #ef4444;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: #f8fafc;
+            padding: 25px;
+            border-right: 1px solid #e2e8f0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .section-title {
+            color: #475569;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title i {
+            color: #4f46e5;
+        }
+
+        /* Tools */
+        .tool-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .tool-btn {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tool-btn:hover {
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .tool-btn.active {
+            border-color: #4f46e5;
+            background: #4f46e5;
+            color: white;
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.3);
+        }
+
+        /* Colors */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .color-option {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 3px solid transparent;
+        }
+
+        .color-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-option.selected {
+            border-color: #4f46e5;
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Brush Size */
+        .brush-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        #brush-slider {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #e2e8f0;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        #brush-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: #4f46e5;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        #brush-size-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #475569;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Actions */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 12px;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .action-btn:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+
+        .action-btn.danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #dc2626;
+            grid-column: span 2;
+        }
+
+        .action-btn.danger:hover {
+            background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+        }
+
+        /* Canvas Area */
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 25px;
+            background: #f8fafc;
+        }
+
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e2e8f0;
+        }
+
+        #main-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .canvas-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .room-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #475569;
+            font-weight: 500;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .room-info i {
+            color: #4f46e5;
+        }
+
+        .canvas-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .canvas-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .canvas-btn:hover {
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+
+        /* Footer */
+        .app-footer {
+            padding: 15px 30px;
+            background: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .footer-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #coordinates {
+            background: white;
+            padding: 5px 12px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .toast.success {
+            border-left-color: #10b981;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                max-height: 300px;
+            }
+            
+            .sidebar > div {
+                flex: 1;
+                min-width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .app-container {
+                height: auto;
+                min-height: 95vh;
+            }
+            
+            .app-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .canvas-controls {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Username Modal -->
+    <div id="username-modal">
+        <div class="modal-content">
+            <h2><i class="fas fa-user"></i> Welcome to Collaborative Drawing!</h2>
+            <p>Please enter your username to start drawing</p>
+            <input type="text" id="username-input" placeholder="Enter your username" maxlength="20" autofocus>
+            <button id="username-submit">Start Drawing</button>
+        </div>
+    </div>
+
+    <!-- Main App (Hidden until username entered) -->
+    <div class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <h1><i class="fas fa-paint-brush"></i> Collaborative Drawing Canvas</h1>
+            <div class="connection-status">
+                <span id="status-indicator" class="status-indicator status-offline"></span>
+                <span id="status-text">Connecting...</span>
+                <div class="user-info">
+                    <i class="fas fa-user"></i>
+                    <span id="current-username">Guest</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <!-- Tools Section -->
+                <div class="tools-section">
+                    <h3 class="section-title"><i class="fas fa-pencil-alt"></i> Drawing Tools</h3>
+                    <div class="tool-buttons">
+                        <button class="tool-btn active" data-tool="brush">
+                            <i class="fas fa-paint-brush"></i>
+                            <span>Brush</span>
+                        </button>
+                        <button class="tool-btn" data-tool="eraser">
+                            <i class="fas fa-eraser"></i>
+                            <span>Eraser</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Colors Section -->
+                <div class="colors-section">
+                    <h3 class="section-title"><i class="fas fa-palette"></i> Colors</h3>
+                    <div class="color-grid">
+                        <div class="color-option selected" style="background-color: #FF6B6B;" data-color="#FF6B6B"></div>
+                        <div class="color-option" style="background-color: #4ECDC4;" data-color="#4ECDC4"></div>
+                        <div class="color-option" style="background-color: #FFD166;" data-color="#FFD166"></div>
+                        <div class="color-option" style="background-color: #06D6A0;" data-color="#06D6A0"></div>
+                        <div class="color-option" style="background-color: #118AB2;" data-color="#118AB2"></div>
+                        <div class="color-option" style="background-color: #073B4C;" data-color="#073B4C"></div>
+                        <div class="color-option" style="background-color: #EF476F;" data-color="#EF476F"></div>
+                        <div class="color-option" style="background-color: #7209B7;" data-color="#7209B7"></div>
+                    </div>
+                </div>
+
+                <!-- Brush Size -->
+                <div class="brush-section">
+                    <h3 class="section-title"><i class="fas fa-sliders-h"></i> Brush Size</h3>
+                    <div class="brush-controls">
+                        <input type="range" id="brush-slider" min="1" max="50" value="5">
+                        <span id="brush-size-value">5px</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions-section">
+                    <h3 class="section-title"><i class="fas fa-history"></i> Actions</h3>
+                    <div class="action-buttons">
+                        <button id="undo-btn" class="action-btn primary">
+                            <i class="fas fa-undo"></i> Undo
+                        </button>
+                        <button id="redo-btn" class="action-btn">
+                            <i class="fas fa-redo"></i> Redo
+                        </button>
+                        <button id="clear-btn" class="action-btn danger">
+                            <i class="fas fa-trash-alt"></i> Clear All
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Canvas Area -->
+            <main class="canvas-area">
+                <div class="canvas-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+                
+                <div class="canvas-controls">
+                    <div class="room-info">
+                        <i class="fas fa-door-open"></i>
+                        <span>Room: <strong>default</strong></span>
+                    </div>
+                    <div class="canvas-buttons">
+                        <button id="save-btn" class="canvas-btn">
+                            <i class="fas fa-download"></i> Save Drawing
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-info">
+                <span>Real-Time Collaborative Drawing Canvas</span>
+                <span id="coordinates">X: 0, Y: 0</span>
+            </div>
+            <div class="performance">
+                <span>Draw together in real-time</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Global variables
+        let currentUser = {
+            name: 'Guest'
+        };
+        
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentColor = '#FF6B6B';
+        let brushSize = 5;
+        let currentTool = 'brush';
+        let drawings = [];
+        let socket = null;
+
+        // DOM Elements
+        const canvas = document.getElementById('main-canvas');
+        const ctx = canvas.getContext('2d');
+        const usernameModal = document.getElementById('username-modal');
+        const appContainer = document.querySelector('.app-container');
+        const usernameInput = document.getElementById('username-input');
+        const usernameSubmit = document.getElementById('username-submit');
+        const currentUsernameSpan = document.getElementById('current-username');
+
+        // Username setup - Show modal on load
+        usernameInput.focus();
+        
+        usernameSubmit.addEventListener('click', () => {
+            const username = usernameInput.value.trim();
+            if (username) {
+                currentUser.name = username;
+                currentUsernameSpan.textContent = username;
+                usernameModal.style.display = 'none';
+                appContainer.style.display = 'flex';
+                initCanvas();
+                connectToServer();
+                showToast(`Welcome ${username}! Start drawing!`, 'success');
+            } else {
+                alert('Please enter a username');
+            }
+        });
+        
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                usernameSubmit.click();
+            }
+        });
+
+        // Initialize canvas
+        function initCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            // Configure context for smooth drawing
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = brushSize;
+            ctx.strokeStyle = currentColor;
+            
+            redrawCanvas();
+            
+            // Resize event
+            window.addEventListener('resize', () => {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                redrawCanvas();
+            });
+        }
+
+        // Connect to server
+        function connectToServer() {
+            socket = io();
+            
+            setupEventListeners();
+            setupSocketEvents();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Tool buttons
+            document.querySelectorAll('.tool-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTool = this.dataset.tool;
+                    showToast(`${currentTool.charAt(0).toUpperCase() + currentTool.slice(1)} tool selected`);
+                });
+            });
+
+            // Color options
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+                    currentColor = this.dataset.color;
+                    showToast(`Color changed to ${this.dataset.color}`);
+                });
+            });
+
+            // Brush slider
+            document.getElementById('brush-slider').addEventListener('input', function(e) {
+                brushSize = parseInt(e.target.value);
+                document.getElementById('brush-size-value').textContent = brushSize + 'px';
+            });
+
+            // Action buttons
+            document.getElementById('undo-btn').addEventListener('click', undo);
+            document.getElementById('clear-btn').addEventListener('click', clearCanvas);
+
+            // Canvas buttons
+            document.getElementById('save-btn').addEventListener('click', saveCanvas);
+
+            // Canvas events - FIXED: Proper mouse event handling
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const pos = getMousePos(e);
+                [lastX, lastY] = [pos.x, pos.y];
+                
+                // Start drawing immediately on mousedown
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDrawing) return;
+                
+                const pos = getMousePos(e);
+                const x = pos.x;
+                const y = pos.y;
+                
+                // Use eraser or brush
+                const color = currentTool === 'eraser' ? '#FFFFFF' : currentColor;
+                
+                // Configure drawing settings
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = brushSize;
+                ctx.strokeStyle = color;
+                
+                // Draw line
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                // Send to server
+                if (socket && socket.connected) {
+                    socket.emit('draw', {
+                        x0: lastX, y0: lastY,
+                        x1: x, y1: y,
+                        color: color,
+                        width: brushSize,
+                        userName: currentUser.name
+                    });
+                }
+                
+                // Update coordinates display
+                document.getElementById('coordinates').textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+                
+                [lastX, lastY] = [x, y];
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isDrawing = false;
+            });
+
+            canvas.addEventListener('mouseout', () => {
+                isDrawing = false;
+            });
+
+            // Touch events for mobile
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                isDrawing = true;
+                const pos = getMousePos(e);
+                [lastX, lastY] = [pos.x, pos.y];
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (!isDrawing) return;
+                e.preventDefault();
+                
+                const pos = getMousePos(e);
+                const x = pos.x;
+                const y = pos.y;
+                
+                const color = currentTool === 'eraser' ? '#FFFFFF' : currentColor;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = brushSize;
+                ctx.strokeStyle = color;
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                if (socket && socket.connected) {
+                    socket.emit('draw', {
+                        x0: lastX, y0: lastY,
+                        x1: x, y1: y,
+                        color: color,
+                        width: brushSize,
+                        userName: currentUser.name
+                    });
+                }
+                
+                document.getElementById('coordinates').textContent = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+                [lastX, lastY] = [x, y];
+            });
+
+            canvas.addEventListener('touchend', () => {
+                isDrawing = false;
+            });
+        }
+
+        // Socket events
+        function setupSocketEvents() {
+            socket.on('connect', () => {
+                document.getElementById('status-indicator').className = 'status-indicator status-online';
+                document.getElementById('status-text').textContent = 'Connected';
+                
+                // Send user info to server
+                socket.emit('user-join', {
+                    name: currentUser.name
+                });
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('status-indicator').className = 'status-indicator status-offline';
+                document.getElementById('status-text').textContent = 'Disconnected';
+                showToast('Disconnected from server', 'error');
+            });
+
+            socket.on('init', (data) => {
+                drawings = data.drawings;
+                redrawCanvas();
+            });
+
+            socket.on('draw', (data) => {
+                drawings.push(data);
+                drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width);
+            });
+
+            socket.on('clear', () => {
+                drawings = [];
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+        }
+
+        // Utility functions
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            
+            if (e.type.includes('touch')) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function drawLine(x0, y0, x1, y1, color, width) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawings.forEach(d => {
+                drawLine(d.x0, d.y0, d.x1, d.y1, d.color, d.width);
+            });
+        }
+
+        // Action functions
+        function undo() {
+            if (drawings.length > 0) {
+                drawings.pop();
+                if (socket && socket.connected) {
+                    socket.emit('undo');
+                }
+                redrawCanvas();
+                showToast('Undo successful');
+            } else {
+                showToast('Nothing to undo', 'info');
+            }
+        }
+
+        function clearCanvas() {
+            if (confirm('Are you sure you want to clear the canvas? This will clear for all users.')) {
+                drawings = [];
+                if (socket && socket.connected) {
+                    socket.emit('clear');
+                }
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                showToast('Canvas cleared', 'success');
+            }
+        }
+
+        function saveCanvas() {
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+            link.download = `collaborative-drawing-${timestamp}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('Drawing saved!', 'success');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? 'check-circle' : 
+                        type === 'error' ? 'exclamation-circle' : 'info-circle';
+            
+            toast.innerHTML = `
+                <i class="fas fa-${icon}"></i>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
